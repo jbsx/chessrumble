@@ -1,16 +1,25 @@
 .chessboard {
     max-height: 100vh;
     width: 800px;
-    display: grid;
-    grid-template-columns: repeat(8, 100px);
+}
+
+.row {
+    display: flex;
 }
 
 .square {
     height: 100px;
     width: 100px;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
+    user-select: none;
+}
+
+.square img {
+    width: 100%;
+    pointer-events: none;
 }
 
 .black {
