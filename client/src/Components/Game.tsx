@@ -1,87 +1,70 @@
 import Chessboard from "./Chessboard";
-import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 
-const Game = () => {
-    const [inpval, setInp] = useState("");
+export default function Game() {
+    let { id } = useParams();
+    const [team, setTeam] = useState("");
+    let ws: WebSocket | null = null;
 
-    const fetchConfig = (method: string): RequestInit => {
-        return {
-            method, // *GET, POST, PUT, DELETE, etc.
-            mode: "cors", // no-cors, *cors, same-origin
-            cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
-            credentials: "include", // include, *same-origin, omit
+    let init = () => {
+        fetch(`http://localhost:8080/join/${id}`, {
+            method: "POST",
+            mode: "cors",
+            cache: "no-cache",
+            credentials: "include",
             headers: { "Content-Type": "application/json" },
-            redirect: "follow", // manual, *follow, error
-            referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-            body: JSON.stringify(""), // body data type must match "Content-Type" header
-        } as RequestInit;
-    };
-
-    const parseFetch = async (url: string): Promise<string> => {
-        let res = await fetch(url, fetchConfig("POST"));
-        let body = await res.body?.getReader().read();
-
-        let s = "";
-        body?.value?.forEach((i) => {
-            s += String.fromCharCode(i);
+            redirect: "follow",
+            referrerPolicy: "no-referrer",
+            body: JSON.stringify(""),
+        }).then((res) => {
+            if (!res.ok) {
+                console.log("unexpected error: ", res);
+            } else {
+                res.body
+                    ?.getReader()
+                    .read()
+                    .then((body) => {
+                        let s = "";
+                        body.value?.forEach((i) => {
+                            s += String.fromCharCode(i);
+                        });
+                        console.log(s);
+                        setTeam(JSON.parse(s).team);
+                    });
+                ws = new WebSocket("ws://localhost:8080/ws");
+                console.log(ws);
+                ws.addEventListener("message", (event) => {
+                    console.log("message on ws conn", event.data);
+                });
+            }
         });
-
-        return s;
     };
+
+    useEffect(() => {
+        init();
+    });
 
     return (
-        <div>
-            <Chessboard />
-            <div className="navbuttons">
-                <button
-                    onClick={async () => {
-                        const res = await fetch(
-                            "http://localhost:8080/create",
-                            fetchConfig("POST"),
-                        );
-                        if (res.ok) {
-                            const body = await res.body?.getReader().read();
-
-                            let s = "";
-                            body?.value?.forEach((i) => {
-                                s += String.fromCharCode(i);
-                            });
-
-                            window.location.assign(
-                                `/join/${JSON.parse(s).message}`,
-                            );
-                        } else {
-                            console.log(res);
-                            throw Error;
-                        }
-                    }}
-                >
-                    CREATE GAME
-                </button>
-                <br />
-                <input
-                    type="text"
-                    value={inpval}
-                    onChange={(e) => {
-                        setInp(e.target.value);
-                    }}
-                />
-                <button
-                    onClick={async () => {
-                        console.log(
-                            JSON.parse(
-                                await parseFetch(
-                                    `http://localhost:8080/join/${inpval}`,
-                                ),
-                            ),
-                        );
-                    }}
-                >
-                    JOIN GAME
-                </button>
-            </div>
+        <div className="Game">
+            <button
+                onClick={async () => {
+                    console.log(await fetch("http://localhost:8080/debug"));
+                }}
+            >
+                DEBUG
+            </button>
+            <button
+                onClick={() => {
+                    if (!ws) {
+                        console.log("bruhkljasdflkjasdf");
+                    }
+                    ws?.send("sdfsdf");
+                }}
+            >
+                SEND WS MESSAGE
+            </button>
+            <Chessboard team={team} />
         </div>
     );
-};
-
-export default Game;
+}

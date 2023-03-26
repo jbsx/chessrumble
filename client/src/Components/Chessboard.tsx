@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Piece, { Type, Team } from "../ts/Chesspiece";
 import "../CSS/Chessboard.css";
 
-const Chessboard = () => {
+const Chessboard = (props: any) => {
     const [board, setBoard] = useState([
         [
             new Piece(Type.R, Team.B),
@@ -31,6 +31,7 @@ const Chessboard = () => {
             new Piece(Type.R, Team.W),
         ],
     ]);
+    const [team, setTeam] = useState("white");
 
     const [from, setFrom] = useState("");
     const [to, setTo] = useState("");
@@ -38,6 +39,28 @@ const Chessboard = () => {
     useEffect(() => {
         console.log(from, to);
     }, [from, to]);
+
+    useEffect(() => {
+        if (props.team == "black") flipBoard();
+    }, [props.team]);
+
+    const flipBoard = () => {
+        let buf = [...board];
+        for (let i = 0; i < 4; i++) {
+            const temp = buf[i];
+            buf[i] = buf[7 - i];
+            buf[7 - i] = temp;
+        }
+        buf.forEach((row) => {
+            for (let i = 0; i < 8; i++) {
+                const temp = row[i];
+                row[i] = row[7 - i];
+                row[7 - i] = temp;
+            }
+        });
+        setBoard(buf);
+        setTeam(team == "white" ? "black" : "white");
+    };
 
     return (
         <div className="chessboard">
@@ -48,7 +71,10 @@ const Chessboard = () => {
                             return (
                                 <div
                                     className={`square ${
-                                        (x + y) % 2 === 0 ? "white" : "black"
+                                        (x + y) % 2 ===
+                                        (team == "black" ? 1 : 0)
+                                            ? "white"
+                                            : "black"
                                     }`}
                                     key={`${y}${x}`}
                                     onMouseDown={() => {
@@ -72,6 +98,13 @@ const Chessboard = () => {
                     </div>
                 );
             })}
+            <button
+                onClick={() => {
+                    flipBoard();
+                }}
+            >
+                flip board
+            </button>
         </div>
     );
 };
