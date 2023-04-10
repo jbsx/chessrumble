@@ -13,7 +13,7 @@ const (
 	writeWait = 10 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
-	pongWait = 10 * 60 * time.Second
+	pongWait = 10 * time.Second
 
 	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = (pongWait * 9) / 10
@@ -24,13 +24,20 @@ const (
 
 // Player Information
 type Client struct {
-	conn      *websocket.Conn
-	team      string
-	connected bool
+	conn *websocket.Conn
+	team string
+	send chan []byte
 }
 
-func (c *Client) check() {
-	//TODO
+func (c *Client) isConnected() bool {
+	if c.conn == nil {
+		return false
+	}
+	c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+	if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+		return false
+	}
+	return true
 }
 
 // State of the game
@@ -40,20 +47,15 @@ type GameState struct {
 	black *Client
 }
 
-func (g *GameState) check() {
-	g.white.check()
-	g.black.check()
-}
-
 func newState(newid string) *GameState {
 	return &GameState{
 		id:    newid,
-		white: &Client{},
-		black: &Client{},
+		white: nil,
+		black: nil,
 	}
 }
 
-func (c *Client) read() {
+func (c *Client) readPump() {
 	defer func() {
 		c.conn.Close()
 	}()
@@ -74,8 +76,39 @@ func (c *Client) read() {
 	}
 }
 
-func (c *Client) write() {
+func (c *Client) writePump() {
+	ticker := time.NewTicker(pingPeriod)
+	defer func() {
+		ticker.Stop()
+		c.conn.Close()
+	}()
+	for {
+		select {
+		case message := <-c.send:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			w, err := c.conn.NextWriter(websocket.TextMessage)
+			if err != nil {
+				return
+			}
+			w.Write(message)
 
+			// Add queued chat messages to the current websocket message.
+			n := len(c.send)
+			for i := 0; i < n; i++ {
+				w.Write([]byte{'\n'})
+				w.Write(<-c.send)
+			}
+
+			if err := w.Close(); err != nil {
+				return
+			}
+		case <-ticker.C:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		}
+	}
 }
 
 type Server struct {
@@ -85,11 +118,5 @@ type Server struct {
 func newServer() *Server {
 	return &Server{
 		games: make(map[string]*GameState),
-	}
-}
-
-func (s *Server) run() {
-	for {
-		// TODO
 	}
 }

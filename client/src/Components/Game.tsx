@@ -48,13 +48,6 @@ export default function Game() {
     return (
         <div className="Game">
             <button
-                onClick={async () => {
-                    console.log(await fetch("http://localhost:8080/debug"));
-                }}
-            >
-                DEBUG
-            </button>
-            <button
                 onClick={() => {
                     if (!ws) {
                         console.log("bruhkljasdflkjasdf");

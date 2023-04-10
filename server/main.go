@@ -62,14 +62,8 @@ func main() {
 			return
 		}
 
-		if game.white.connected && game.black.connected {
-			ctx.JSON(http.StatusNotAcceptable, gin.H{"message": "Game ongoing"})
-			return
-		}
-
+		//check if already a player
 		if cookie, err := ctx.Cookie("token"); err == nil {
-			//either authorized or to join or issue new token
-
 			token, err := jwt.Parse(cookie, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
@@ -92,7 +86,17 @@ func main() {
 
 		}
 
-		//Not in game, Create new token and join
+		//check if both players are connected and refuse new connection if game full
+		fmt.Println(game)
+		if game.white != nil && game.black != nil {
+			//check if connections are in open state
+			if game.white.isConnected() && game.black.isConnected() {
+				ctx.JSON(http.StatusNotAcceptable, gin.H{"message": "Game ongoing"})
+				return
+			}
+		}
+
+		//Not in game - create new token and join
 		token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"iat":  time.UTC,
 			"id":   id,
@@ -137,28 +141,35 @@ func main() {
 
 			conn.SetCloseHandler(func(code int, text string) error {
 				if claims["team"] == "white" {
-					game.white.connected = false
+					game.white = nil
 				} else {
-					game.black.connected = false
+					game.black = nil
 				}
 				//println("from close handler")
 				return fmt.Errorf("connection closed")
 			})
 
+			conn.SetPongHandler(func(appData string) error {
+				println(appData)
+				return nil
+			})
+
 			if claims["team"] == "white" {
 				game.white = &Client{
-					team:      "white",
-					connected: true,
-					conn:      conn,
+					team: "white",
+					conn: conn,
+					send: make(chan []byte),
 				}
-				go game.white.read()
+				go game.white.readPump()
+				go game.white.writePump()
 			} else if claims["team"] == "black" {
 				game.black = &Client{
-					team:      "black",
-					connected: true,
-					conn:      conn,
+					team: "black",
+					conn: conn,
+					send: make(chan []byte),
 				}
-				go game.black.read()
+				go game.black.readPump()
+				go game.black.writePump()
 			}
 		}
 	})
