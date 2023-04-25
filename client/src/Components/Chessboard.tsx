@@ -1,47 +1,84 @@
 import { useEffect, useState } from "react";
-import Piece, { Type, Team } from "../ts/Chesspiece";
+import Piece from "../ts/Chesspiece";
 import "../CSS/Chessboard.css";
 
-const Chessboard = (props: any) => {
-    const [board, setBoard] = useState([
-        [
-            new Piece(Type.R, Team.B),
-            new Piece(Type.N, Team.B),
-            new Piece(Type.B, Team.B),
-            new Piece(Type.Q, Team.B),
-            new Piece(Type.K, Team.B),
-            new Piece(Type.B, Team.B),
-            new Piece(Type.N, Team.B),
-            new Piece(Type.R, Team.B),
-        ],
-        new Array(8).fill(new Piece(Type.P, Team.B)),
-        new Array(8).fill(undefined),
-        new Array(8).fill(undefined),
-        new Array(8).fill(undefined),
-        new Array(8).fill(undefined),
-        new Array(8).fill(new Piece(Type.P, Team.W)),
-        [
-            new Piece(Type.R, Team.W),
-            new Piece(Type.N, Team.W),
-            new Piece(Type.B, Team.W),
-            new Piece(Type.Q, Team.W),
-            new Piece(Type.K, Team.W),
-            new Piece(Type.B, Team.W),
-            new Piece(Type.N, Team.W),
-            new Piece(Type.R, Team.W),
-        ],
-    ]);
+type chessboardProps = {
+    fen?: string;
+    team?: string;
+    ws?: WebSocket | null;
+};
+
+const Chessboard = (props: chessboardProps) => {
+    const [board, setBoard] = useState(new Array());
     const [team, setTeam] = useState("white");
 
     const [from, setFrom] = useState("");
     const [to, setTo] = useState("");
 
+    //Forsyth-Edwards Notation
+    //For more context: https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
+    const fromFEN = (fen: string): Array<Array<Piece>> => {
+        const args = fen.split(" ");
+        const rows = args[0].split("/");
+
+        let res = new Array(8);
+
+        for (let i = 0; i < 8; i++) {
+            res[i] = new Array(8).fill(undefined);
+
+            let idx = 0;
+            while (idx < 8) {
+                const curr = rows[i].charAt(idx);
+                if (curr >= "0" && curr <= "9") {
+                    idx += parseInt(curr);
+                } else {
+                    res[i][idx] = Piece.fromFEN(curr);
+                }
+                idx += 1;
+            }
+        }
+
+        return res;
+    };
+
+    if (props.fen) {
+        //start from specific given position
+        setBoard(fromFEN(props.fen));
+    } else {
+        //initial position
+        setBoard(
+            fromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
+        );
+    }
+
+    //Converts array coordinates to chess coordinates
+    const arrToChessCoord = (c: string): string => {
+        let res = "";
+        if (team == "white") {
+            res += String.fromCharCode(97 + parseInt(c.charAt(0)));
+            res += (parseInt(c.charAt(1)) - 8) * -1;
+        } else {
+            res += String.fromCharCode(104 - parseInt(c.charAt(0)));
+            res += parseInt(c.charAt(1)) + 1;
+        }
+        return res;
+    };
+
+    //sends moved data through websocket connection
+    const sendMove = (from: string, to: string) => {
+        console.log(from + " -> " + to);
+    };
+
     useEffect(() => {
-        console.log(from, to);
+        if (from && to) {
+            sendMove(arrToChessCoord(from), arrToChessCoord(to));
+            setFrom("");
+            setTo("");
+        }
     }, [from, to]);
 
     useEffect(() => {
-        if (props.team == "black") flipBoard();
+        if (props.team === "black") flipBoard();
     }, [props.team]);
 
     const flipBoard = () => {
@@ -59,7 +96,7 @@ const Chessboard = (props: any) => {
             }
         });
         setBoard(buf);
-        setTeam(team == "white" ? "black" : "white");
+        setTeam(team === "white" ? "black" : "white");
     };
 
     return (
@@ -70,9 +107,9 @@ const Chessboard = (props: any) => {
                         {row.map((s: Piece, y: number) => {
                             return (
                                 <div
-                                    className={`square ${
+                                    className={`square ${s ? s.getFEN() : ""} ${
                                         (x + y) % 2 ===
-                                        (team == "black" ? 1 : 0)
+                                        (team === "black" ? 1 : 0)
                                             ? "white"
                                             : "black"
                                     }`}
@@ -83,16 +120,7 @@ const Chessboard = (props: any) => {
                                     onMouseUp={() => {
                                         setTo(`${y}${x}`);
                                     }}
-                                >
-                                    {s && (
-                                        <img
-                                            src={require("../assets/" +
-                                                Team[s.getTeam()] +
-                                                Type[s.getType()] +
-                                                ".svg")}
-                                        />
-                                    )}
-                                </div>
+                                ></div>
                             );
                         })}
                     </div>
@@ -103,7 +131,7 @@ const Chessboard = (props: any) => {
                     flipBoard();
                 }}
             >
-                flip board
+                Flip Board
             </button>
         </div>
     );

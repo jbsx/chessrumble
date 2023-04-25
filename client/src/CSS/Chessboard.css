@@ -15,11 +15,7 @@
     justify-content: center;
     align-items: center;
     user-select: none;
-}
-
-.square img {
-    width: 100%;
-    pointer-events: none;
+    background-size: cover;
 }
 
 .black {
@@ -30,6 +26,53 @@
     background-color: whitesmoke;
 }
 
+.r {
+    background-image: url("../assets/BR.svg");
+}
+
+.n {
+    background-image: url("../assets/BN.svg");
+}
+
+.b {
+    background-image: url("../assets/BB.svg");
+}
+
+.q {
+    background-image: url("../assets/BQ.svg");
+}
+
+.k {
+    background-image: url("../assets/BK.svg");
+}
+
+.p {
+    background-image: url("../assets/BP.svg");
+}
+
+.R {
+    background-image: url("../assets/WR.svg");
+}
+
+.N {
+    background-image: url("../assets/WN.svg");
+}
+
+.B {
+    background-image: url("../assets/WB.svg");
+}
+
+.Q {
+    background-image: url("../assets/WQ.svg");
+}
+
+.K {
+    background-image: url("../assets/WK.svg");
+}
+
+.P {
+    background-image: url("../assets/WP.svg");
+}
 @media screen and (max-width: 800px) {
     .chessboard {
         width: 100vw;

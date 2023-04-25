@@ -7,7 +7,7 @@ export default function Game() {
     const [team, setTeam] = useState("");
     let ws: WebSocket | null = null;
 
-    let init = () => {
+    useEffect(() => {
         fetch(`http://localhost:8080/join/${id}`, {
             method: "POST",
             mode: "cors",
@@ -35,29 +35,29 @@ export default function Game() {
                 ws = new WebSocket("ws://localhost:8080/ws");
                 console.log(ws);
                 ws.addEventListener("message", (event) => {
-                    console.log("message on ws conn", event.data);
+                    console.log("ws msg -> ", event.data);
                 });
             }
         });
-    };
-
-    useEffect(() => {
-        init();
-    });
+    }, []);
 
     return (
         <div className="Game">
             <button
                 onClick={() => {
                     if (!ws) {
-                        console.log("bruhkljasdflkjasdf");
+                        console.log("No websocket connection");
                     }
-                    ws?.send("sdfsdf");
+                    ws?.send("Testing ws conn");
                 }}
             >
                 SEND WS MESSAGE
             </button>
-            <Chessboard team={team} />
+            <Chessboard
+                team={team}
+                ws={ws}
+                fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+            />
         </div>
     );
 }
