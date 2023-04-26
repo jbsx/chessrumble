@@ -29,7 +29,7 @@ export default function Game() {
                         body.value?.forEach((i) => {
                             s += String.fromCharCode(i);
                         });
-                        console.log(s);
+                        console.log(JSON.parse(s));
                         setTeam(JSON.parse(s).team);
                     });
                 ws = new WebSocket("ws://localhost:8080/ws");
@@ -43,21 +43,12 @@ export default function Game() {
 
     return (
         <div className="Game">
-            <button
-                onClick={() => {
-                    if (!ws) {
-                        console.log("No websocket connection");
-                    }
-                    ws?.send("Testing ws conn");
-                }}
-            >
-                SEND WS MESSAGE
-            </button>
             <Chessboard
                 team={team}
                 ws={ws}
                 fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
             />
+            <span style={{ color: "white" }}> Playing as {team} </span>
         </div>
     );
 }

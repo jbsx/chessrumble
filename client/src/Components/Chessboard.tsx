@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Piece from "../ts/Chesspiece";
+import Piece, { Team } from "../ts/Chesspiece";
 import "../CSS/Chessboard.css";
 
 type chessboardProps = {
@@ -9,12 +9,6 @@ type chessboardProps = {
 };
 
 const Chessboard = (props: chessboardProps) => {
-    const [board, setBoard] = useState(new Array());
-    const [team, setTeam] = useState("white");
-
-    const [from, setFrom] = useState("");
-    const [to, setTo] = useState("");
-
     //Forsyth-Edwards Notation
     //For more context: https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
     const fromFEN = (fen: string): Array<Array<Piece>> => {
@@ -37,24 +31,28 @@ const Chessboard = (props: chessboardProps) => {
                 idx += 1;
             }
         }
-
         return res;
     };
 
-    if (props.fen) {
-        //start from specific given position
-        setBoard(fromFEN(props.fen));
-    } else {
-        //initial position
-        setBoard(
-            fromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
-        );
-    }
+    //render using FEN if passed as props
+    //render starting position if FEN undefined
+    const [board, setBoard] = useState(
+        props.fen
+            ? fromFEN(props.fen)
+            : fromFEN(
+                  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              ),
+    );
+    const [turn, setTurn] = useState(Team.W);
+    const [team, setTeam] = useState(Team.W);
+
+    const [from, setFrom] = useState("");
+    const [to, setTo] = useState("");
 
     //Converts array coordinates to chess coordinates
     const arrToChessCoord = (c: string): string => {
         let res = "";
-        if (team == "white") {
+        if (team == Team.W) {
             res += String.fromCharCode(97 + parseInt(c.charAt(0)));
             res += (parseInt(c.charAt(1)) - 8) * -1;
         } else {
@@ -64,14 +62,27 @@ const Chessboard = (props: chessboardProps) => {
         return res;
     };
 
-    //sends moved data through websocket connection
+    //Converts chess coordinates to array coordinates
+    const chessToArrCoord = (c: string): string => {
+        let res = "";
+        if (team == Team.W) {
+            res += String.fromCharCode(97 + parseInt(c.charAt(0)));
+            res += (parseInt(c.charAt(1)) - 8) * -1;
+        } else {
+            res += String.fromCharCode(104 - parseInt(c.charAt(0)));
+            res += parseInt(c.charAt(1)) + 1;
+        }
+        return res;
+    };
+
+    //sends move data through the websocket connection
     const sendMove = (from: string, to: string) => {
         console.log(from + " -> " + to);
     };
 
     useEffect(() => {
         if (from && to) {
-            sendMove(arrToChessCoord(from), arrToChessCoord(to));
+            sendMove(chessToArrCoord(from), chessToArrCoord(to));
             setFrom("");
             setTo("");
         }
@@ -96,43 +107,49 @@ const Chessboard = (props: chessboardProps) => {
             }
         });
         setBoard(buf);
-        setTeam(team === "white" ? "black" : "white");
+        setTeam(team === Team.W ? Team.B : Team.W);
     };
 
     return (
-        <div className="chessboard">
-            {board.map((row: Array<Piece>, x: number) => {
-                return (
-                    <div className="row" key={x}>
-                        {row.map((s: Piece, y: number) => {
-                            return (
-                                <div
-                                    className={`square ${s ? s.getFEN() : ""} ${
-                                        (x + y) % 2 ===
-                                        (team === "black" ? 1 : 0)
-                                            ? "white"
-                                            : "black"
-                                    }`}
-                                    key={`${y}${x}`}
-                                    onMouseDown={() => {
-                                        setFrom(`${y}${x}`);
-                                    }}
-                                    onMouseUp={() => {
-                                        setTo(`${y}${x}`);
-                                    }}
-                                ></div>
-                            );
-                        })}
-                    </div>
-                );
-            })}
-            <button
-                onClick={() => {
-                    flipBoard();
-                }}
-            >
-                Flip Board
-            </button>
+        <div>
+            <div className="options">
+                <button
+                    onClick={() => {
+                        flipBoard();
+                    }}
+                >
+                    Flip Board
+                </button>
+            </div>
+            <div className="chessboard turn-black">
+                {board.map((row: Array<Piece>, x: number) => {
+                    return (
+                        <div className="row" key={x}>
+                            {row.map((s: Piece, y: number) => {
+                                return (
+                                    <div
+                                        className={`square ${
+                                            s ? s.getFEN() : ""
+                                        } ${
+                                            (x + y) % 2 ===
+                                            (team === Team.B ? 1 : 0)
+                                                ? "white"
+                                                : "black"
+                                        }`}
+                                        key={`${y}${x}`}
+                                        onMouseDown={() => {
+                                            setFrom(`${y}${x}`);
+                                        }}
+                                        onMouseUp={() => {
+                                            setTo(`${y}${x}`);
+                                        }}
+                                    ></div>
+                                );
+                            })}
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 };

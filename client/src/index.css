@@ -5,7 +5,7 @@ body {
         "Helvetica Neue", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: #202020;
+    background: #2d2d2d;
     display: flex;
     justify-content: center;
 }
