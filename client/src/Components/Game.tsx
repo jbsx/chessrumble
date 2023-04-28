@@ -1,10 +1,11 @@
 import Chessboard from "./Chessboard";
+import { Team } from "../ts/Chesspiece";
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 export default function Game() {
     let { id } = useParams();
-    const [team, setTeam] = useState("");
+    const [team, setTeam] = useState(Team.W);
     let ws: WebSocket | null = null;
 
     useEffect(() => {
@@ -30,7 +31,9 @@ export default function Game() {
                             s += String.fromCharCode(i);
                         });
                         console.log(JSON.parse(s));
-                        setTeam(JSON.parse(s).team);
+                        setTeam(
+                            JSON.parse(s).team == "white" ? Team.W : Team.B,
+                        );
                     });
                 ws = new WebSocket("ws://localhost:8080/ws");
                 console.log(ws);
@@ -48,7 +51,6 @@ export default function Game() {
                 ws={ws}
                 fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
             />
-            <span style={{ color: "white" }}> Playing as {team} </span>
         </div>
     );
 }
