@@ -1,8 +1,4 @@
-import { useState } from "react";
-
 export default function Home() {
-    const [inpval, setInp] = useState("");
-
     const fetchConfig = (method: string): RequestInit => {
         return {
             method, // *GET, POST, PUT, DELETE, etc.
@@ -32,8 +28,9 @@ export default function Home() {
                             s += String.fromCharCode(i);
                         });
 
+                        console.log(JSON.parse(s));
                         window.location.assign(
-                            `/game/${JSON.parse(s).message}`,
+                            `/game/${JSON.parse(s).game_id}`,
                         );
                     } else {
                         console.log(res);
@@ -42,23 +39,6 @@ export default function Home() {
                 }}
             >
                 CREATE GAME
-            </button>
-            <br />
-            <input
-                type="text"
-                value={inpval}
-                onChange={(e) => {
-                    setInp(e.target.value);
-                }}
-            />
-            <button
-                onClick={() => {
-                    window.location.assign(
-                        `http://localhost:3000/game/${inpval}`,
-                    );
-                }}
-            >
-                JOIN GAME
             </button>
         </div>
     );

@@ -3,7 +3,6 @@ import Piece, { Team } from "../ts/Chesspiece";
 import "../CSS/Chessboard.css";
 
 type chessboardProps = {
-    fen?: string;
     team: Team;
     ws: WebSocket | null;
 };
@@ -19,7 +18,7 @@ const Chessboard = (props: chessboardProps) => {
 
         let res = new Array(8);
 
-        if (props.team == Team.W) {
+        if (props.team === Team.W) {
             for (let i = 0; i < 8; i++) {
                 res[i] = new Array(8).fill(undefined);
                 let pos = 0;
@@ -31,7 +30,7 @@ const Chessboard = (props: chessboardProps) => {
                     }
                 });
             }
-        } else {
+        } else if (props.team === Team.B) {
             rows.reverse();
             for (let i = 0; i < 8; i++) {
                 res[i] = new Array(8).fill(undefined);
@@ -49,19 +48,17 @@ const Chessboard = (props: chessboardProps) => {
             }
         }
 
+        setTurn(args[1] === "w" ? Team.W : Team.B);
+
         return res;
     };
 
     //render using FEN if passed as props
     //render starting position if FEN undefined
     const board = useMemo(() => {
-        //if (props.fen) {
-        //    return fromFEN(props.fen);
-        //} else {
         return fromFEN(
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
         );
-        //}
     }, [turn, props.team]);
 
     const [from, setFrom] = useState("");
@@ -70,10 +67,10 @@ const Chessboard = (props: chessboardProps) => {
     //Converts array coordinates to chess coordinates
     const arrToChessCoord = (c: string): string => {
         let res = "";
-        if (props.team == Team.W) {
+        if (props.team === Team.W) {
             res += String.fromCharCode(97 + parseInt(c.charAt(0)));
             res += (parseInt(c.charAt(1)) - 8) * -1;
-        } else {
+        } else if (props.team === Team.B) {
             res += String.fromCharCode(104 - parseInt(c.charAt(0)));
             res += parseInt(c.charAt(1)) + 1;
         }
@@ -83,20 +80,19 @@ const Chessboard = (props: chessboardProps) => {
     //Converts chess coordinates to array coordinates
     const chessToArrCoord = (c: string): string => {
         let res = "";
-        if (props.team == Team.W) {
+        if (props.team === Team.W) {
             res += c.charCodeAt(0) - 97;
             res += (parseInt(c.charAt(1)) - 8) * -1;
-        } else {
-            res += c.charCodeAt(0) - 97;
-            res += (parseInt(c.charAt(1)) - 8) * -1;
+        } else if (props.team === Team.B) {
+            res += 104 - c.charCodeAt(0);
+            res += parseInt(c.charAt(1)) - 1;
         }
         return res;
     };
 
     //sends move data through the websocket connection
     const sendMove = (from: string, to: string) => {
-        console.log(from, to);
-        console.log(chessToArrCoord(from) + " -> " + chessToArrCoord(to));
+        props.ws?.send(`moved ${from} ${to}`);
     };
 
     useEffect(() => {
