@@ -63,48 +63,30 @@ func main() {
 			return
 		}
 
-		//TODO: move this section later in the code. player could be white or black. check with jwt token
-		//check if both players are connected and refuse new connection if game full
-		if game.white != nil && game.black != nil {
-			//check if connections are in open state
-			if game.white.isConnected() && game.black.isConnected() {
-				ctx.JSON(http.StatusNotAcceptable, gin.H{"message": "Game ongoing"})
-				return
-			}
-		}
-
-		//Authenticate
-		tokenString, err := ctx.Cookie("token")
+		//check if token_string is available
+		token_string, err := ctx.Cookie("token")
 		if err != nil {
-			//TODO: no token
-			if err.Error() == "http: named cookie not present" {
-				//return error if game full. Otherwise initiate ws connection
-				if game.white != nil && game.black != nil {
-					if game.white.isConnected() && game.black.isConnected() {
-						ctx.JSON(http.StatusNotAcceptable, gin.H{"message": "Game full"})
-						return
-					}
-				}
-			} else {
-				fmt.Printf("Error in parsing cookie: %v\n", err)
-				return
-			}
+			fmt.Println(err)
 		}
 
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-			}
+		//validate token
+		token, err := jwt.Parse(token_string, func(t *jwt.Token) (interface{}, error) {
 			return JWTKEY, nil
 		})
-		if err != nil {
-			fmt.Printf("Error in validating token: %v\n", err)
-		}
 
-		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		//no token
+		if token == nil {
 
-			if claims["id"] != id {
-				//TODO: join this game and delete game matching the id in the jwt token from server.games[]
+			if game.black != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"message": "game full"})
+				return
+			}
+
+			var team string
+			if game.white == nil {
+				team = "W"
+			} else {
+				team = "B"
 			}
 
 			conn, err := wsupgrader.Upgrade(ctx.Writer, ctx.Request, nil)
@@ -112,11 +94,28 @@ func main() {
 				fmt.Println("Failed to set websocket upgrade: ", err)
 				return
 			}
-
-			game := server.games[claims["id"].(string)]
+			if team == "W" {
+				game.white = &Client{
+					conn: conn,
+					team: team,
+					send: make(chan []byte),
+				}
+				go game.white.readPump()
+				go game.white.writePump()
+				game.white.send <- []byte("Team W")
+			} else {
+				game.black = &Client{
+					conn: conn,
+					team: team,
+					send: make(chan []byte),
+				}
+				go game.black.readPump()
+				go game.black.writePump()
+				game.black.send <- []byte("Team B")
+			}
 
 			conn.SetCloseHandler(func(code int, text string) error {
-				if claims["team"] == "W" {
+				if team == "W" {
 					game.white = nil
 				} else {
 					game.black = nil
@@ -125,26 +124,88 @@ func main() {
 			})
 
 			conn.SetPongHandler(func(appData string) error {
-				fmt.Println(appData)
+				fmt.Println("print from pong handler" + appData)
 				return nil
 			})
 
-			if claims["team"] == "W" {
-				game.white = &Client{
-					team: "W",
-					conn: conn,
-					send: make(chan []byte),
+			return
+		}
+
+		//get data from token
+		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			if claims["id"] == id {
+				conn, err := wsupgrader.Upgrade(ctx.Writer, ctx.Request, nil)
+				if err != nil {
+					fmt.Println("Failed to set websocket upgrade: ", err)
+					return
 				}
-				go game.white.readPump()
-				go game.white.writePump()
-			} else if claims["team"] == "B" {
-				game.black = &Client{
-					team: "B",
-					conn: conn,
-					send: make(chan []byte),
+				if claims["team"] == "W" {
+					game.white = &Client{
+						conn: conn,
+						team: "W",
+						send: make(chan []byte),
+					}
+					go game.white.readPump()
+					go game.white.writePump()
+					game.white.send <- []byte("Team W")
+				} else {
+					game.black = &Client{
+						conn: conn,
+						team: "B",
+						send: make(chan []byte),
+					}
+					go game.black.readPump()
+					go game.black.writePump()
+					game.black.send <- []byte("Team B")
 				}
-				go game.black.readPump()
-				go game.black.writePump()
+
+				conn.SetCloseHandler(func(code int, text string) error {
+					if claims["team"] == "W" {
+						game.white = nil
+					} else {
+						game.black = nil
+					}
+					return fmt.Errorf("connection closed")
+				})
+
+				conn.SetPongHandler(func(appData string) error {
+					fmt.Println("print from pong handler" + appData)
+					return nil
+				})
+			} else {
+				//token present and valid but game id mismatch
+				if game.white.conn != nil && game.black.conn != nil {
+					ctx.JSON(http.StatusBadRequest, gin.H{"message": "Game full"})
+					return
+				} else {
+					//connect ws
+					var team string
+					if game.white.conn != nil {
+						team = "W"
+					} else {
+						team = "B"
+					}
+
+					conn, err := wsupgrader.Upgrade(ctx.Writer, ctx.Request, nil)
+					if err != nil {
+						fmt.Println("Failed to set websocket upgrade: ", err)
+						return
+					}
+
+					conn.SetCloseHandler(func(code int, text string) error {
+						if team == "W" {
+							game.white = nil
+						} else {
+							game.black = nil
+						}
+						return fmt.Errorf("connection closed")
+					})
+
+					conn.SetPongHandler(func(appData string) error {
+						fmt.Println("print from pong handler" + appData)
+						return nil
+					})
+				}
 			}
 		}
 	})

@@ -12,6 +12,9 @@ export default function Game() {
     ws.addEventListener("message", (event) => {
         console.log("ws msg -> ", event.data);
     });
+    ws.addEventListener("open", (event) => {
+        console.log("open event", event);
+    });
 
     return (
         <div className="Game">
