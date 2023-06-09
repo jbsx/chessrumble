@@ -10,7 +10,14 @@ export default function Game() {
 
     ws = new WebSocket(`ws://localhost:8080/ws/${id}`);
     ws.addEventListener("message", (event) => {
-        console.log("ws msg -> ", event.data);
+        let msg = event.data.split(" ");
+
+        msg.forEach((temp: String) => {
+            let data = temp.split(":");
+            if (data[0] == "Team") {
+                setTeam(data[1] == "W" ? Team.W : Team.B);
+            }
+        });
     });
     ws.addEventListener("open", (event) => {
         console.log("open event", event);

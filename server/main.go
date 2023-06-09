@@ -89,6 +89,17 @@ func main() {
 				team = "B"
 			}
 
+			println("from no token")
+			//set cookie if no token
+			token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+				"iat":  time.UTC,
+				"id":   id,
+				"team": team,
+			}).SignedString(JWTKEY)
+
+			ctx.SetCookie("token", token, 60*60*24, "/", domain, true, true)
+
+			// upgrade http to ws
 			conn, err := wsupgrader.Upgrade(ctx.Writer, ctx.Request, nil)
 			if err != nil {
 				fmt.Println("Failed to set websocket upgrade: ", err)
@@ -100,18 +111,24 @@ func main() {
 					team: team,
 					send: make(chan []byte),
 				}
+
 				go game.white.readPump()
 				go game.white.writePump()
-				game.white.send <- []byte("Team W")
+
+				game.white.send <- []byte("Team:W")
+
 			} else {
 				game.black = &Client{
 					conn: conn,
 					team: team,
 					send: make(chan []byte),
 				}
+
 				go game.black.readPump()
 				go game.black.writePump()
-				game.black.send <- []byte("Team B")
+
+				game.black.send <- []byte("Team:B")
+
 			}
 
 			conn.SetCloseHandler(func(code int, text string) error {
@@ -147,7 +164,7 @@ func main() {
 					}
 					go game.white.readPump()
 					go game.white.writePump()
-					game.white.send <- []byte("Team W")
+					game.white.send <- []byte("Team:W")
 				} else {
 					game.black = &Client{
 						conn: conn,
@@ -156,7 +173,7 @@ func main() {
 					}
 					go game.black.readPump()
 					go game.black.writePump()
-					game.black.send <- []byte("Team B")
+					game.black.send <- []byte("Team:B")
 				}
 
 				conn.SetCloseHandler(func(code int, text string) error {
