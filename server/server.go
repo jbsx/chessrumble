@@ -49,9 +49,17 @@ type GameState struct {
 
 func newState(newid string) *GameState {
 	return &GameState{
-		id:    newid,
-		white: nil,
-		black: nil,
+		id: newid,
+		white: &Client{
+			conn: nil,
+			team: "W",
+			send: make(chan []byte),
+		},
+		black: &Client{
+			conn: nil,
+			team: "B",
+			send: make(chan []byte),
+		},
 	}
 }
 
