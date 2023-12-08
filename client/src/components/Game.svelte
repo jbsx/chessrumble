@@ -4,7 +4,7 @@
 
     //axios.get("http://localhost:3000/game", {withCredentials: true}).then(res => console.log(res.data));
 
-    let game = new Chess("w" as Team);
+    let game = new Chess("w");
     let hover = false;
     let hover_offset = [0, 0];
     let hover_pos = [0, 0];
@@ -28,6 +28,10 @@
             e.preventDefault();
             hover = false;
         }}
+        on:mouseleave={(e)=>{
+            e.preventDefault()
+            hover= false;
+        }}
     >
         <div class="flex flex-col h-screen gap-8 items-center overflow-hidden">
             <a href="/"
@@ -36,7 +40,7 @@
                 </h1></a
             >
             <div class="flex flex-col justify-center items-center">
-                <div class="flex gap-2 m-2">
+                <div class="flex gap-2 m-2 hidden">
                     <button
                         class="bg-zinc-300 py-3 px-7 rounded-md font-bold uppercase text-zinc-800 hover:bg-[var(--black)] border-[var(--main)]"
                         on:click={() => {
@@ -60,15 +64,13 @@
                 </div>
                 <div
                     class="w-fit"
-                    on:contextmenu={(e) => {
-                        return false;
-                    }}
+                    on:contextmenu|preventDefault
                 >
                     {#each board as rank, y}
                         <div class="flex">
                             {#each rank as sq, x}
                                 <div
-                                    class={`relative w-28 h-28 flex justify-center items-center select-none ouline-none ${
+                                    class={`relative w-[120px] h-[120px] flex justify-center items-center select-none ouline-none ${
                                         (x + y) % 2 == 0
                                             ? "bg-[var(--white)]"
                                             : "bg-[var(--black)]"
@@ -76,36 +78,44 @@
                                     on:mousedown={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
+
                                         if (e.button == 0) {
                                             hover = true;
                                             hover_offset = [
-                                                e.clientX,
-                                                e.clientY,
+                                                //@ts-ignore
+                                                e.clientX - (e.layerX) + 60,
+                                                //@ts-ignore
+                                                e.clientY - (e.layerY) + 60,
                                             ];
-                                            hover_pos = [0, 0];
+                                            hover_pos = [e.clientX - hover_offset[0], e.clientY - hover_offset[1]];
+
                                             from = [x, y];
                                         } else if (e.button == 2) {
                                             hover = false;
-                                            console.log("right clicked");
                                         }
                                     }}
                                     on:mouseup={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        hover = false;
 
                                         if (e.button == 2) return;
 
-                                        const ok = game.play(
-                                            game.get_algebraic(
-                                                from[0],
-                                                from[1],
-                                            ),
-                                            game.get_algebraic(x, y),
-                                        );
-                                        if (ok) {
-                                            board = game.board;
+                                        if (hover){
+                                            const ok = game.play(
+                                                game.get_algebraic(
+                                                    from[0],
+                                                    from[1],
+                                                ),
+                                                game.get_algebraic(x, y),
+                                            );
+                                            if (ok) {
+                                                board = game.board;
+                                            }
+
                                         }
+
+                                        hover = false
+
                                     }}
                                 >
                                     <span
@@ -120,7 +130,7 @@
                                                 hover &&
                                                 x == from[0] &&
                                                 y == from[1]
-                                                    ? "absolute pointer-events-none"
+                                                    ? "absolute pointer-events-none z-[2]"
                                                     : ""
                                             }`}
                                             style:left={`${hover_pos[0]}px`}
