@@ -1,0 +1,27 @@
+{
+    "name": "server",
+    "type": "module",
+    "version": "1.0.0",
+    "description": "",
+    "main": "build/index.js",
+    "scripts": {
+        "dev": "tsc && node build/index.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@fastify/cookie": "^9.2.0",
+        "@fastify/cors": "^8.4.1",
+        "@fastify/websocket": "^8.2.0",
+        "fastify": "^4.24.3",
+        "jsonwebtoken": "^9.0.2",
+        "kokopu": "^4.8.0",
+        "uuid": "^9.0.1"
+    },
+    "devDependencies": {
+        "@types/jsonwebtoken": "^9.0.5",
+        "@types/uuid": "^9.0.7",
+        "@types/ws": "^8.5.10"
+    }
+}
