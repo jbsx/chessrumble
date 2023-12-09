@@ -31,6 +31,12 @@ server.get("/game/:id", (req, res) => {
     console.log(data);
     res.send({ message: "OK" });
 });
+server.get("/game/bruh/", { websocket: true }, (con, req) => {
+    con.socket.on("message", (message) => {
+        console.log(message);
+        con.socket.send("hi from server");
+    });
+});
 server.listen({
     port: PORT,
 }, () => {

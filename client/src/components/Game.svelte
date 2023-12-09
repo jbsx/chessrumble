@@ -4,6 +4,12 @@
 
     //axios.get("http://localhost:3000/game", {withCredentials: true}).then(res => console.log(res.data));
 
+    let ws = new WebSocket("ws://localhost:3000/game/bruh");
+
+    //ws.onopen(function(e){
+    //    ws.send("bruh")
+    //})
+
     let game = new Chess("w");
     let hover = false;
     let hover_offset = [0, 0];
