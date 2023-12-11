@@ -7,12 +7,14 @@
     import { ComponentType } from "svelte";
 
     let page: ComponentType;
+    let props: {[key: string]: string};
 
     router("/", () => {
         page = Home;
     });
 
     router("/:id", (ctx) => {
+        props = {id: ctx.params.id}
         page = Game;
     });
 
@@ -24,7 +26,7 @@
 </script>
 
 <main>
-    <svelte:component this={page} />
+    <svelte:component this={page} {...props}/>
 </main>
 
 <style>

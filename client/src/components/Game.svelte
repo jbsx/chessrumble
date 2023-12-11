@@ -1,14 +1,7 @@
 <script lang="ts">
-    //import axios from "axios";
-    import Chess, { Team } from "../chess";
+    import Chess from "../chess";
 
-    //axios.get("http://localhost:3000/game", {withCredentials: true}).then(res => console.log(res.data));
-
-    let ws = new WebSocket("ws://localhost:3000/game/bruh");
-
-    //ws.onopen(function(e){
-    //    ws.send("bruh")
-    //})
+    export let id;
 
     let game = new Chess("w");
     let hover = false;
@@ -21,7 +14,8 @@
 </script>
 
 <main>
-    <div
+    <div></div>
+    <!--<div
         on:mousemove={(e) => {
             e.preventDefault();
             if (hover)
@@ -40,13 +34,13 @@
         }}
     >
         <div class="flex flex-col h-screen gap-8 items-center overflow-hidden">
-            <a href="/"
+            <a class="hover:no-underline" href="/"
                 ><h1 class="text-6xl text-[var(--main)] uppercase">
-                    Ching<span class="text-[var(--black)]">Ming</span>
+                    <span>Ching</span><span class="text-[var(--black)]">Ming</span>
                 </h1></a
             >
             <div class="flex flex-col justify-center items-center">
-                <div class="flex gap-2 m-2 hidden">
+                <div class="flex gap-2 m-2">
                     <button
                         class="bg-zinc-300 py-3 px-7 rounded-md font-bold uppercase text-zinc-800 hover:bg-[var(--black)] border-[var(--main)]"
                         on:click={() => {
@@ -66,6 +60,15 @@
                         }}
                     >
                         Toggle Team
+                    </button>
+
+                    <button
+                        class="bg-zinc-300 py-3 px-7 rounded-md font-bold uppercase text-zinc-800 hover:bg-[var(--black)] border-[var(--main)]"
+                        on:click={() => {
+                            game.conn.send("bruh")
+                        }}
+                    >
+                        Send message on WS
                     </button>
                 </div>
                 <div
@@ -151,4 +154,5 @@
             </div>
         </div>
     </div>
+-->
 </main>
