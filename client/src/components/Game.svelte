@@ -1,21 +1,30 @@
 <script lang="ts">
-    import Chess from "../chess";
+    import Chess, { boardTeam } from "../chess";
+    import { onMount } from "svelte";
+    import Icon from "@iconify/svelte";
 
     export let id;
 
-    let game = new Chess("w");
     let hover = false;
     let hover_offset = [0, 0];
     let hover_pos = [0, 0];
-
-    let board = game.board;
-
     let from = [0, 0];
+
+    let game = new Chess(id);
+
+    const bruh = id as string;
+
+    $: vboard = game.board;
+
+    onMount(() => {
+        return game.onUpdate(() => {
+            vboard = game.board;
+        });
+    });
 </script>
 
 <main>
-    <div></div>
-    <!--<div
+    <div
         on:mousemove={(e) => {
             e.preventDefault();
             if (hover)
@@ -28,54 +37,48 @@
             e.preventDefault();
             hover = false;
         }}
-        on:mouseleave={(e)=>{
-            e.preventDefault()
-            hover= false;
+        on:mouseleave={(e) => {
+            e.preventDefault();
+            hover = false;
         }}
     >
         <div class="flex flex-col h-screen gap-8 items-center overflow-hidden">
             <a class="hover:no-underline" href="/"
                 ><h1 class="text-6xl text-[var(--main)] uppercase">
-                    <span>Ching</span><span class="text-[var(--black)]">Ming</span>
+                    <span>Ching</span><span class="text-[var(--black)]"
+                        >Ming</span
+                    >
                 </h1></a
             >
+            <button
+                class="p-4 flex justify-center items-center gap-4 text-white uppercase
+                    bg-[rgba(0,0,0,0.1)] rounded-xl cursor-pointer hover:bg-[rgba(0,0,0,0.2)] border-none"
+                on:click={() => {
+                    navigator.clipboard.writeText(bruh);
+                    //TODO: notify "copied to clipboard"
+                }}
+            >
+                {bruh}
+                <Icon icon="octicon:copy-16" width={20} />
+            </button>
+            <button
+                class="p-4 flex justify-center items-center gap-4 text-white uppercase
+                    bg-[rgba(0,0,0,0.1)] rounded-xl cursor-pointer hover:bg-[rgba(0,0,0,0.2)] border-none"
+                on:click={() => {
+                    fetch(`http://localhost:3000/debug/gamestate/${bruh}`).then(
+                        (res) => {
+                            res.json().then((data) =>
+                                console.log(data.message),
+                            );
+                        },
+                    );
+                }}
+            >
+                log game state
+            </button>
             <div class="flex flex-col justify-center items-center">
-                <div class="flex gap-2 m-2">
-                    <button
-                        class="bg-zinc-300 py-3 px-7 rounded-md font-bold uppercase text-zinc-800 hover:bg-[var(--black)] border-[var(--main)]"
-                        on:click={() => {
-                            game.updateBoard();
-                            board = game.board;
-                        }}
-                    >
-                        rerender
-                    </button>
-
-                    <button
-                        class="bg-zinc-300 py-3 px-7 rounded-md font-bold uppercase text-zinc-800 hover:bg-[var(--black)] border-[var(--main)]"
-                        on:click={() => {
-                            game.toggleTeam();
-                            game.updateBoard();
-                            board = game.board;
-                        }}
-                    >
-                        Toggle Team
-                    </button>
-
-                    <button
-                        class="bg-zinc-300 py-3 px-7 rounded-md font-bold uppercase text-zinc-800 hover:bg-[var(--black)] border-[var(--main)]"
-                        on:click={() => {
-                            game.conn.send("bruh")
-                        }}
-                    >
-                        Send message on WS
-                    </button>
-                </div>
-                <div
-                    class="w-fit"
-                    on:contextmenu|preventDefault
-                >
-                    {#each board as rank, y}
+                <div class="w-fit" on:contextmenu|preventDefault>
+                    {#each vboard as rank, y}
                         <div class="flex">
                             {#each rank as sq, x}
                                 <div
@@ -92,11 +95,14 @@
                                             hover = true;
                                             hover_offset = [
                                                 //@ts-ignore
-                                                e.clientX - (e.layerX) + 60,
+                                                e.clientX - e.layerX + 60,
                                                 //@ts-ignore
-                                                e.clientY - (e.layerY) + 60,
+                                                e.clientY - e.layerY + 60,
                                             ];
-                                            hover_pos = [e.clientX - hover_offset[0], e.clientY - hover_offset[1]];
+                                            hover_pos = [
+                                                e.clientX - hover_offset[0],
+                                                e.clientY - hover_offset[1],
+                                            ];
 
                                             from = [x, y];
                                         } else if (e.button == 2) {
@@ -109,26 +115,21 @@
 
                                         if (e.button == 2) return;
 
-                                        if (hover){
-                                            const ok = game.play(
+                                        if (hover) {
+                                            game.play(
                                                 game.get_algebraic(
                                                     from[0],
                                                     from[1],
                                                 ),
                                                 game.get_algebraic(x, y),
                                             );
-                                            if (ok) {
-                                                board = game.board;
-                                            }
-
                                         }
 
-                                        hover = false
-
+                                        hover = false;
                                     }}
                                 >
                                     <span
-                                        class="absolute top-0 right-1 opacity-30"
+                                        class="absolute top-0 right-1 opacity-50"
                                         >{game.get_algebraic(x, y)}</span
                                     >
                                     {#if sq}
@@ -154,5 +155,4 @@
             </div>
         </div>
     </div>
--->
 </main>

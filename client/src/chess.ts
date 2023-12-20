@@ -1,5 +1,14 @@
+import axios from "axios";
+import { writable } from "svelte/store";
+
+type Func = () => void;
+const onUpdateFunctions: Func[] = [];
+
 export type Type = "k" | "q" | "r" | "b" | "n" | "p";
 export type Team = "w" | "b";
+
+export let boardTeam = writable("" as Team);
+export let vboard = writable([] as Array<Array<Piece | null>>);
 
 export class Piece {
     team: Team;
@@ -13,24 +22,50 @@ export class Piece {
 
 export default class Chess {
     player: Team;
-    conn: WebSocket;
+    conn: WebSocket | null;
     fen: string;
     board: Array<Array<Piece | null>>;
 
-    constructor(player: Team) {
-        this.player = player;
+    constructor(id: string) {
+        this.player = "w";
 
         this.fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-        this.conn = new WebSocket("ws://localhost:3000/game/bruh/");
+        this.conn = null;
 
-        this.conn.addEventListener("open", (message)=>{
-            console.log(message)
-        })
+        axios
+            .get(`http://localhost:3000/game/join/${id}`, {
+                withCredentials: true,
+            })
+            .then(() => {
+                this.conn = new WebSocket(`ws://localhost:3000/game/${id}`);
 
-        this.conn.addEventListener("message", (message)=>{
-            console.log(message)
-        })
+                this.conn.addEventListener("open", () => {
+                    console.log("WebSocket connection established");
+                });
+
+                this.conn.addEventListener("message", (msg) => {
+                    const data = msg.data.split(" ");
+                    switch (data[0]) {
+                        case "FEN":
+                            this.fen = data.slice(1, data.length).join(" ");
+                            console.log(this.fen);
+                            this.updateBoard();
+                            break;
+                        case "TEAM":
+                            console.log(data[1]);
+                            this.player = data[1] as Team;
+                            this.updateBoard();
+                            break;
+                        default:
+                            console.log("default");
+                    }
+                });
+
+                this.conn.addEventListener("close", () => {
+                    console.log("connnection closed");
+                });
+            });
 
         this.board = Array(8)
             .fill([])
@@ -42,17 +77,12 @@ export default class Chess {
     }
 
     updateBoard() {
-        //Clear board
         this.board = this.board.map(() => {
             return new Array(8).fill(null);
         });
 
+        //Loop through FEN and populate board
         if (this.player == "w") {
-            //WHITE
-            //Loop through FEN and populate board
-            
-            //get fen from WebSocket
-            this.conn.send("fen")
             this.fen
                 .split(" ")[0]
                 .split("/")
@@ -70,8 +100,6 @@ export default class Chess {
                     });
                 });
         } else {
-            //BLACK
-            //Loop through FEN and populate board
             this.fen
                 .split(" ")[0]
                 .split("/")
@@ -92,31 +120,16 @@ export default class Chess {
                         });
                 });
         }
+        onUpdateFunctions.forEach((fn) => fn());
     }
 
-    toggleTeam() {
-        this.player = this.player === "w" ? "b" : "w";
+    onUpdate(fn: Func) {
+        onUpdateFunctions.push(fn);
     }
 
     play(from: string, to: string) {
-        this.conn.send(`play ${from} ${to}`)
-    }
-
-    get_piece(from: string): Piece | null {
-
-        return null
-
-        //const piece = this.conn.square(from as Square);
-        //if (piece == "-") {
-        //    return null;
-        //} else {
-        //    return new Piece(piece.charAt(0) as Team, piece.charAt(1) as Type);
-        //}
-    }
-
-    turn(): Team {
-        return "w";
-        //return this.conn.turn() as Team;
+        this.conn?.send(`play ${from} ${to}`);
+        this.updateBoard();
     }
 
     private get_rank(x: number): string {
