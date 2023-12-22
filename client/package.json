@@ -9,6 +9,7 @@
         "start": "sirv public --no-clear --single --port 8080"
     },
     "devDependencies": {
+        "@iconify/svelte": "^3.1.6",
         "@rollup/plugin-commonjs": "^24.0.0",
         "@rollup/plugin-json": "^6.0.1",
         "@rollup/plugin-node-resolve": "^15.0.0",

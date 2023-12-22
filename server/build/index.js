@@ -15,8 +15,9 @@ import ws from "@fastify/websocket";
 import jwt from "jsonwebtoken";
 import { v4 as uuid } from "uuid";
 import { Position } from "kokopu";
-const PORT = ((_a = process.env.PORT) !== null && _a !== void 0 ? _a : 3000);
-const JWT_SECRET = (_b = process.env.JWT_SECRET) !== null && _b !== void 0 ? _b : "LKjfalfjaodifjalsdkLJhOPThHOiGI97T87f7Y";
+import "dotenv/config";
+const PORT = parseInt((_a = process.env.PORT) !== null && _a !== void 0 ? _a : "3000");
+const JWT_SECRET = (_b = process.env.JWT_SECRET) !== null && _b !== void 0 ? _b : uuid().toString();
 const server = fastify();
 const games = {};
 server.register(cors, {
@@ -25,36 +26,187 @@ server.register(cors, {
 });
 server.register(ws);
 server.register(cookie);
-server.get("/create", (req, res) => {
-    const token = jwt.sign({
-        iat: Date.now(),
-    }, JWT_SECRET);
-    const id = uuid();
-    games[id.toString()] = new Position();
-    res.setCookie("token", token.toString(), {
-        httpOnly: true,
-        sameSite: true,
-    }).send({
-        id: id.toString(),
-    });
+server.get("/game/create", (_, res) => {
+    const game_id = uuid().toString();
+    games[game_id.toString()] = {
+        white_id: null,
+        black_id: null,
+        white_conn: null,
+        black_conn: null,
+        board: new Position(),
+    };
+    setTimeout(() => {
+        var _a, _b;
+        //clear after 30 minutes
+        (_a = games[game_id].white_conn) === null || _a === void 0 ? void 0 : _a.destroy();
+        (_b = games[game_id].black_conn) === null || _b === void 0 ? void 0 : _b.destroy();
+        delete games[game_id];
+    }, 30 * 60 * 1000);
+    res.send({ id: game_id });
+});
+server.get("/game/join/:id", (req, res) => {
+    const { id } = req.params;
+    const game = games[id];
+    let { token } = req.cookies;
+    if (!game)
+        return res.status(404).send("Game not found");
+    validateToken: if (token) {
+        let payload;
+        try {
+            payload = jwt.verify(token, JWT_SECRET);
+        }
+        catch (e) {
+            res.clearCookie("token");
+            token = undefined;
+            break validateToken;
+        }
+        if (payload) {
+            if (payload.game_id !== id) {
+                token = undefined;
+                break validateToken;
+            }
+            else if (payload.player_id === game.white_id ||
+                payload.player_id === game.black_id) {
+                return res.send({ message: "OK" });
+            }
+            else if (game.white_id && game.black_id) {
+                console.log(game);
+                return res.status(400).send({
+                    message: "Game is already in progress",
+                });
+            }
+            else {
+                return res.status(400).send({
+                    message: "Game is already in progress",
+                });
+            }
+        }
+    }
+    if (!game.white_id) {
+        const player_id = uuid().toString();
+        const token = jwt.sign({
+            iat: Date.now(),
+            exp: Math.floor(Date.now() / 1000) + 60 * 60,
+            player: "w",
+            game_id: id,
+            player_id,
+        }, JWT_SECRET);
+        games[id].white_id = player_id;
+        return res
+            .setCookie("token", token.toString(), {
+            httpOnly: true,
+            secure: true,
+            path: "/game",
+        })
+            .send({ message: "OK" });
+    }
+    else if (!game.black_id) {
+        const player_id = uuid().toString();
+        const token = jwt.sign({
+            iat: Date.now(),
+            exp: Math.floor(Date.now() / 1000) + 60 * 60,
+            player: "b",
+            game_id: id,
+            player_id,
+        }, JWT_SECRET);
+        games[id].black_id = player_id;
+        return res
+            .setCookie("token", token.toString(), {
+            httpOnly: true,
+            secure: true,
+            path: "/game",
+        })
+            .send({ message: "OK" });
+    }
+    else {
+        return res.send({ message: "game already in progress" });
+    }
 });
 server.register(function (fastify) {
     return __awaiter(this, void 0, void 0, function* () {
         fastify.get("/game/:id", { websocket: true }, (connection, req) => {
-            connection.socket.on("open", (message) => {
-                if (!games[req.id])
-                    console.log("game doesnt exist");
-                console.log(games[req.id]);
-            });
-            connection.socket.on("message", (message) => {
-                const msg = message.toString().split(" ");
-                switch (msg[0]) {
-                    case "play":
-                        console.log("playing");
-                    default:
-                        console.log("defaulting");
+            const params = req.params;
+            const { token } = req.cookies;
+            const game = games[params.id];
+            if (!game) {
+                console.log("game doesnt exist");
+                connection.destroy();
+                return;
+            }
+            if (!token) {
+                console.log("no token");
+                connection.destroy();
+                return;
+            }
+            //verify JWT
+            try {
+                const payload = jwt.verify(token, JWT_SECRET);
+                //validate game id
+                if (payload.game_id !== params.id) {
+                    console.log("game invalid or authentication invalid");
+                    connection.destroy();
+                    return;
                 }
-            });
+                const team = payload.player_id === game.white_id
+                    ? "w"
+                    : payload.player_id === game.black_id
+                        ? "b"
+                        : null;
+                if (!team) {
+                    connection.destroy();
+                    return;
+                }
+                if (team === "w") {
+                    games[params.id].white_conn = connection;
+                }
+                else if (team === "b") {
+                    games[params.id].black_conn = connection;
+                }
+                console.log(games[params.id]);
+                connection.socket.send(`FEN ${game.board.fen()}`);
+                connection.socket.send(`TEAM ${team}`);
+                connection.socket.on("close", () => {
+                    if (team === "w") {
+                        games[params.id].white_conn = null;
+                    }
+                    else if (team === "b") {
+                        games[params.id].black_conn = null;
+                    }
+                });
+                connection.socket.on("message", (message) => {
+                    var _a, _b;
+                    const game = games[params.id];
+                    const msg = message.toString().split(" ");
+                    switch (msg[0]) {
+                        case "play":
+                            //check if turn
+                            if (team !== game.board.turn()) {
+                                console.log("out of turn");
+                                break;
+                            }
+                            const move = game.board.isMoveLegal(msg[1], msg[2]);
+                            if (typeof move != "boolean") {
+                                if (move.status === "regular") {
+                                    game.board.play(move());
+                                }
+                                else if (move.status === "promotion") {
+                                    game.board.play(move("q")); //TODO
+                                }
+                            }
+                            const res = `FEN ${game.board.fen()}`;
+                            (_a = game.white_conn) === null || _a === void 0 ? void 0 : _a.socket.send(res);
+                            (_b = game.black_conn) === null || _b === void 0 ? void 0 : _b.socket.send(res);
+                            break;
+                        default:
+                            console.log("defaulting");
+                    }
+                });
+            }
+            catch (e) {
+                console.log(e);
+                connection.destroy();
+                return;
+            }
         });
     });
 });
