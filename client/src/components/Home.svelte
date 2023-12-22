@@ -17,6 +17,18 @@
                         window.location.href = "/game";
                     }}>Create</button
                 >
+                <button
+                    class="bg-zinc-300 py-3 px-7 rounded-md font-bold uppercase text-zinc-800 hover:bg-[var(--black)] border-[var(--main)]"
+                    on:click={async () => {
+                        const res = await axios.get("http://localhost:3000/create", {withCredentials: true})
+                        console.log(res)
+                        //const ws = new WebSocket(`ws://localhost:3000/game/${res.data.id}`)
+
+                        //ws.addEventListener("open", ()=>{
+                        //    console.log("socket open")
+                        //})
+                    }}>WS</button
+                >
             </div>
                 <div class="bg-zinc-300 h-[1px] w-full"/>
             <div class="w-full flex flex-col justify-center items-center gap-2">
