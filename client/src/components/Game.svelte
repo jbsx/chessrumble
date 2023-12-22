@@ -1,5 +1,7 @@
 <script lang="ts">
-    import Chess, { boardTeam } from "../chess";
+    import { Piece, Team } from "../chess";
+    import { get_algebraic } from "../utils";
+    import Chess, { boardTeam, board } from "../chess";
     import { onMount } from "svelte";
     import Icon from "@iconify/svelte";
 
@@ -14,12 +16,21 @@
 
     const bruh = id as string;
 
-    $: vboard = game.board;
+    $: bTeam = "w" as Team;
+    $: vboard = Array(8)
+        .fill([])
+        .map(() => {
+            return new Array(8).fill(null);
+        }) as Array<Array<Piece | null>>;
 
     onMount(() => {
-        return game.onUpdate(() => {
-            vboard = game.board;
+        boardTeam.subscribe((t) => {
+            bTeam = t;
         });
+        board.subscribe((b) => {
+            vboard = b;
+        });
+        return;
     });
 </script>
 
@@ -60,21 +71,6 @@
             >
                 {bruh}
                 <Icon icon="octicon:copy-16" width={20} />
-            </button>
-            <button
-                class="p-4 flex justify-center items-center gap-4 text-white uppercase
-                    bg-[rgba(0,0,0,0.1)] rounded-xl cursor-pointer hover:bg-[rgba(0,0,0,0.2)] border-none"
-                on:click={() => {
-                    fetch(`http://localhost:3000/debug/gamestate/${bruh}`).then(
-                        (res) => {
-                            res.json().then((data) =>
-                                console.log(data.message),
-                            );
-                        },
-                    );
-                }}
-            >
-                log game state
             </button>
             <div class="flex flex-col justify-center items-center">
                 <div class="w-fit" on:contextmenu|preventDefault>
@@ -117,11 +113,12 @@
 
                                         if (hover) {
                                             game.play(
-                                                game.get_algebraic(
+                                                get_algebraic(
                                                     from[0],
                                                     from[1],
+                                                    bTeam,
                                                 ),
-                                                game.get_algebraic(x, y),
+                                                get_algebraic(x, y, bTeam),
                                             );
                                         }
 
@@ -130,7 +127,7 @@
                                 >
                                     <span
                                         class="absolute top-0 right-1 opacity-50"
-                                        >{game.get_algebraic(x, y)}</span
+                                        >{get_algebraic(x, y, bTeam)}</span
                                     >
                                     {#if sq}
                                         <img

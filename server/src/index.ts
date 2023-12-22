@@ -45,12 +45,6 @@ server.get("/game/create", (_, res) => {
     res.send({ id: game_id });
 });
 
-server.get("/debug/gamestate/:id", (req, res) => {
-    const { id } = req.params as { id: string };
-    if (games[id]) res.send(games[id]);
-    else res.status(400).send("game does not exist");
-});
-
 server.get("/game/join/:id", (req, res) => {
     const { id } = req.params as { id: string };
     const game = games[id];

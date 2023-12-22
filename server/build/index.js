@@ -35,29 +35,19 @@ server.get("/game/create", (_, res) => {
         black_conn: null,
         board: new Position(),
     };
-    //setTimeout(
-    //    () => {
-    //        //clear after 30 minutes
-    //        games[game_id].white_conn?.destroy();
-    //        games[game_id].black_conn?.destroy();
-    //        delete games[game_id];
-    //    },
-    //    30 * 60 * 1000,
-    //);
+    setTimeout(() => {
+        var _a, _b;
+        //clear after 30 minutes
+        (_a = games[game_id].white_conn) === null || _a === void 0 ? void 0 : _a.destroy();
+        (_b = games[game_id].black_conn) === null || _b === void 0 ? void 0 : _b.destroy();
+        delete games[game_id];
+    }, 30 * 60 * 1000);
     res.send({ id: game_id });
-});
-server.get("/debug/gamestate/:id", (req, res) => {
-    const { id } = req.params;
-    if (games[id])
-        res.send(games[id]);
-    else
-        res.status(400).send("game does not exist");
 });
 server.get("/game/join/:id", (req, res) => {
     const { id } = req.params;
     const game = games[id];
     let { token } = req.cookies;
-    console.log("JOINING");
     if (!game)
         return res.status(404).send("Game not found");
     validateToken: if (token) {
